@@ -144,3 +144,33 @@ def a_star(grid, h, start, goal):
 def heuristic(position, goal_position):
     return np.linalg.norm(np.array(position) - np.array(goal_position))
 
+
+
+def global_to_local(global_position, global_home):
+    
+    # TODO: Get easting and northing of global_home
+    (easting_home, northing_home, zone_number, zone_letter) = utm.from_latlon(global_home[1],global_home[0])
+    # TODO: Get easting and northing of global_position
+    (easting_pos, northing_pos, zone_number, zone_letter) = utm.from_latlon(global_position[1],global_position[0])
+    # TODO: Create local_position from global and home positions
+    
+    local_position = numpy.array([ northing_pos - northing_home, easting_pos - easting_home, -global_position[2]])
+    
+    return local_position
+
+
+
+def local_to_global(local_position, global_home):
+    
+    # TODO: get easting, northing, zone letter and number of global_home
+    (easting_home, northing_home, zone_number, zone_letter) = utm.from_latlon(global_home[1],global_home[0])
+    # TODO: get (lat, lon) from local_position and converted global_home
+    (latitude_home, longitude_home) = utm.to_latlon(easting_home, northing_home, zone_number, zone_letter)
+
+    # TODO: Create global_position of (lat, lon, alt)
+    
+                               
+    global_position = numpy.array([longitude_home,latitude_home,-local_position[2]])
+    
+    return global_position
+
