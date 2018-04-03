@@ -55,6 +55,11 @@ class Action(Enum):
     EAST = (0, 1, 1)
     NORTH = (-1, 0, 1)
     SOUTH = (1, 0, 1)
+    # Additional moves for diagonal with a cost of sqrt(2)
+    NW = (-1,-1,sqrt(2))
+    NE = (-1,1,sqrt(2))
+    SW = (1,-1,sqrt(2))
+    SE = (1,1,sqrt(2))
 
     @property
     def cost(self):
@@ -68,6 +73,7 @@ class Action(Enum):
 def valid_actions(grid, current_node):
     """
     Returns a list of valid actions given a grid and current node.
+    Done: Include valid actions as diagonal actions
     """
     valid_actions = list(Action)
     n, m = grid.shape[0] - 1, grid.shape[1] - 1
@@ -84,6 +90,15 @@ def valid_actions(grid, current_node):
         valid_actions.remove(Action.WEST)
     if y + 1 > m or grid[x, y + 1] == 1:
         valid_actions.remove(Action.EAST)
+    # New list of possible states to be tested on diagonal values
+    if (x - 1 < 0 or grid[x - 1, y] == 1) and (y - 1 < 0 or grid[x, y - 1] == 1):
+        valid_actions.remove(Action.NW)
+    if (x - 1 < 0 or grid[x - 1, y] == 1) and (y + 1 > m or grid[x, y + 1] == 1):
+        valid_actions.remove(Action.NE)
+    if (x + 1 > n or grid[x + 1, y] == 1) and (y - 1 < 0 or grid[x, y - 1] == 1):
+        valid_actions.remove(Action.SW)
+    if (x + 1 > n or grid[x + 1, y] == 1) and (y + 1 < 0 or grid[x, y + 1] == 1):
+        valid_actions.remove(Action.SE)
 
     return valid_actions
 
@@ -98,16 +113,16 @@ def a_star(grid, h, start, goal):
 
     branch = {}
     found = False
-    
+
     while not queue.empty():
         item = queue.get()
         current_node = item[1]
         if current_node == start:
             current_cost = 0.0
-        else:              
+        else:
             current_cost = branch[current_node][0]
-            
-        if current_node == goal:        
+
+        if current_node == goal:
             print('Found a path.')
             found = True
             break
@@ -118,12 +133,12 @@ def a_star(grid, h, start, goal):
                 next_node = (current_node[0] + da[0], current_node[1] + da[1])
                 branch_cost = current_cost + action.cost
                 queue_cost = branch_cost + h(next_node, goal)
-                
-                if next_node not in visited:                
-                    visited.add(next_node)               
+
+                if next_node not in visited:
+                    visited.add(next_node)
                     branch[next_node] = (branch_cost, current_node, action)
                     queue.put((queue_cost, next_node))
-             
+
     if found:
         # retrace steps
         n = goal
@@ -136,7 +151,7 @@ def a_star(grid, h, start, goal):
     else:
         print('**********************')
         print('Failed to find a path!')
-        print('**********************') 
+        print('**********************')
     return path[::-1], path_cost
 
 
@@ -147,30 +162,30 @@ def heuristic(position, goal_position):
 
 
 def global_to_local(global_position, global_home):
-    
+
     # TODO: Get easting and northing of global_home
     (easting_home, northing_home, zone_number, zone_letter) = utm.from_latlon(global_home[1],global_home[0])
     # TODO: Get easting and northing of global_position
     (easting_pos, northing_pos, zone_number, zone_letter) = utm.from_latlon(global_position[1],global_position[0])
     # TODO: Create local_position from global and home positions
-    
+
     local_position = numpy.array([ northing_pos - northing_home, easting_pos - easting_home, -global_position[2]])
-    
+
     return local_position
 
 
 
 def local_to_global(local_position, global_home):
-    
+
     # TODO: get easting, northing, zone letter and number of global_home
     (easting_home, northing_home, zone_number, zone_letter) = utm.from_latlon(global_home[1],global_home[0])
     # TODO: get (lat, lon) from local_position and converted global_home
     (latitude_home, longitude_home) = utm.to_latlon(easting_home, northing_home, zone_number, zone_letter)
 
     # TODO: Create global_position of (lat, lon, alt)
-    
-                               
+
+
     global_position = numpy.array([longitude_home,latitude_home,-local_position[2]])
-    
+
     return global_position
 
