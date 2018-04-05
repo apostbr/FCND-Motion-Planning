@@ -9,7 +9,7 @@ from planning_utils import a_star, heuristic, create_grid, prune_path
 from udacidrone import Drone
 from udacidrone.connection import MavlinkConnection
 from udacidrone.messaging import MsgID
-from udacidrone.frame_utils import global_to_local
+from udacidrone.frame_utils import global_to_local, local_to_global
 
 
 class States(Enum):
@@ -128,10 +128,11 @@ class MotionPlanning(Drone):
         lat0 = float(head[0].split(",")[0].split(" ")[1])
         lon0 = float(head[0].split(",")[1].split(" ")[2].replace("\n",""))
 
-
+        print("lat0:", lat0)
+        print("lon0:", lon0)
         # TODO: set home position to (lon0, lat0, 0)
-        self.set_home_position(lat0, lon0, 0)
-
+        self.set_home_position(lon0, lat0, TARGET_ALTITUDE)
+        #self.set_home_position(-122.397450, 37.792480, TARGET_ALTITUDE)
 
         # TODO: retrieve current global position
         #current_global = (self.global_position[0],
@@ -141,9 +142,13 @@ class MotionPlanning(Drone):
         self.current_global = [self._longitude, self._latitude, self._altitude]
         print("Current Global:", self.current_global)
         print("Global Home:", self.global_home)
-        self.current_local = global_to_local(self.current_global, self.global_home)
+        
+        local_north, local_east, local_down = global_to_local(self.current_global, self.global_home)
 
+        #self.current_local = global_to_local(self.current_global, self.global_home)
+        #print("Current Local:", self.current_local)
 
+        print('Local North {0}, Local East {1}, Local Down {1}'.format(local_north, local_east, local_down))
         print('global home {0}, position {1}, local position {2}'.format(self.global_home, self.global_position,
                                                                          self.local_position))
         # Read in obstacle map
@@ -153,28 +158,33 @@ class MotionPlanning(Drone):
         grid, north_offset, east_offset = create_grid(data, TARGET_ALTITUDE, SAFETY_DISTANCE)
         print("North offset = {0}, east offset = {1}".format(north_offset, east_offset))
         # Define starting point on the grid (this is just grid center)
-        grid_start = (-north_offset, -east_offset)
+        #grid_start = (-north_offset, -east_offset)
         # TODO: convert start position to current position rather than map center
-        grid_start = (int(self.current_local[0]-north_offset), int(self.current_local[1]-east_offset))
-
+        grid_start_north = int(np.ceil(local_north - north_offset))
+        grid_start_east = int(np.ceil(local_east - east_offset))
+        grid_start = (grid_start_north, grid_start_east)
 
         # Set goal as some arbitrary position on the grid
-        grid_goal = (-north_offset + 10, -east_offset + 10)
+        #grid_goal = (-north_offset + 10, -east_offset + 10)
         # TODO: adapt to set goal as latitude / longitude position and convert
-        grid_goal = (int(self.current_local[0]-north_offset + 10), int(self.current_local[1]-east_offset + 10))
+        goal_ne = (600, 400)
+        #grid_goal_north, grid_goal_east, goal_alt = global_to_local(self.goal_global_position, self.global_home)
+        #grid_goal = (int(np.ceil(goal_north - north_offset)), int(np.ceil(goal_east - east_offset)))
 
         # Run A* to find a path from start to goal
         # TODO: add diagonal motions with a cost of sqrt(2) to your A* implementation
         # or move to a different search space such as a graph (not done here)
-        print('Local Start and Goal: ', grid_start, grid_goal)
-        path, _ = a_star(grid, heuristic, grid_start, grid_goal)
+        print('Local Start and Goal: ', grid_start, goal_ne)
+        path, _ = a_star(grid, heuristic, grid_start, goal_ne)
         # TODO: prune path to minimize number of waypoints - Used Bresenham
         pruned_path = prune_path(path)
-
+        print('Pruned Path:', pruned_path)
         # TODO (if you're feeling ambitious): Try a different approach altogether!
 
         # Convert path to waypoints
         waypoints = [[p[0] + north_offset, p[1] + east_offset, TARGET_ALTITUDE, 0] for p in pruned_path]
+        #temp = waypoints.pop(0)
+        print('Waypoints:', waypoints)
         # Set self.waypoints
         self.waypoints = waypoints
         # TODO: send waypoints to sim (this is just for visualization of waypoints)
